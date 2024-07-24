@@ -7,18 +7,22 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+type AppRoutine = func() (stopWindowRendering bool)
+
 type App struct {
 	title       string
 	rootElement components.Component
 
 	fontStore map[string]rl.Font
+	routine   AppRoutine
 }
 
-func newApp(title string, initialSize rl.Vector2, root components.Component) *App {
+func newApp(title string, initialSize rl.Vector2, root components.Component, routine AppRoutine) *App {
 	app := &App{
 		title:       title,
 		rootElement: root,
 		fontStore:   map[string]rl.Font{},
+		routine:     routine,
 	}
 
 	rl.InitWindow(int32(initialSize.X), int32(initialSize.Y), app.title)
@@ -38,7 +42,17 @@ func (app *App) run() {
 
 		app.rootElement.Render(app.getFont)
 
-		rl.EndDrawing()
+		if app.routine != nil {
+			exitFlag := app.routine()
+
+			rl.EndDrawing()
+
+			if exitFlag {
+				break
+			}
+		} else {
+			rl.EndDrawing()
+		}
 	}
 }
 
@@ -69,6 +83,7 @@ type AppBuilder struct {
 	initialSize rl.Vector2
 	fontsToLoad map[string]string
 	rootElement components.Component
+	appRoutine  AppRoutine
 }
 
 func BuildApp() *AppBuilder {
@@ -77,6 +92,7 @@ func BuildApp() *AppBuilder {
 		initialSize: rl.Vector2Zero(),
 		fontsToLoad: map[string]string{},
 		rootElement: nil,
+		appRoutine:  nil,
 	}
 }
 
@@ -101,8 +117,13 @@ func (builder *AppBuilder) WithRootElement(rootElement components.Component) *Ap
 	return builder
 }
 
+func (builder *AppBuilder) WithAppRoutine(routine AppRoutine) *AppBuilder {
+	builder.appRoutine = routine
+	return builder
+}
+
 func (builder *AppBuilder) Run() {
-	app := newApp(builder.title, builder.initialSize, builder.rootElement)
+	app := newApp(builder.title, builder.initialSize, builder.rootElement, builder.appRoutine)
 
 	for fontName, fontPath := range builder.fontsToLoad {
 		app.loadFont(fontName, fontPath)
