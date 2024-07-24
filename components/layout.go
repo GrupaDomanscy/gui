@@ -117,7 +117,7 @@ func (layout *LayoutComponent) calculateChildPositionsAndParentSizeForMainAxis(s
 		break
 	case AlignCenter:
 		sizeSum := sum(sizes)
-		currentPos = maxViewport/2 - (sizeSum / 2)
+		currentPos = (maxViewport / 2) - (sizeSum / 2)
 
 		for i, size := range sizes {
 			positions[i] = currentPos
@@ -241,7 +241,7 @@ func (layout *LayoutComponent) CalculateSize(getFont GetFontCallback, maxViewpor
 	switch layout.direciton {
 	case DirectionColumn:
 		yAxisSizes = getArrayOfYAxisFromVector2(childrenSizes)
-		xAxisSizes = getArrayOfYAxisFromVector2(childrenSizes)
+		xAxisSizes = getArrayOfXAxisFromVector2(childrenSizes)
 
 		yAxisPositions, yAxisParentSize = layout.calculateChildPositionsAndParentSizeForMainAxis(yAxisSizes, maxViewport.Y)
 		xAxisPositions, xAxisParentSize = layout.calculateChildPositionsAndParentSizeForCrossAxis(xAxisSizes, maxViewport.X)
