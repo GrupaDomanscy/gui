@@ -263,7 +263,6 @@ func (layout *LayoutComponent) CalculateSize(getFont GetFontCallback, maxViewpor
 		child.SetPosition(positions[i])
 	}
 
-	//TODO: Finish this funciton properly
 	return rl.Vector2{
 		X: xAxisParentSize,
 		Y: yAxisParentSize,
