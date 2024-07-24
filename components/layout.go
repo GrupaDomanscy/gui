@@ -15,7 +15,7 @@ const AlignEnd = 2
 
 type LayoutComponent struct {
 	children           []Component
-	direciton          int
+	direction          int
 	mainAxisAlignment  int
 	crossAxisAlignment int
 
@@ -48,7 +48,7 @@ func (layout *LayoutComponent) calculateSizesOfChildren(getFont GetFontCallback,
 
 	currentMaxViewport := maxViewport
 
-	if layout.direciton == DirectionColumn {
+	if layout.direction == DirectionColumn {
 		for i, child := range layout.children {
 			childSize := child.CalculateSize(getFont, currentMaxViewport)
 
@@ -238,7 +238,7 @@ func (layout *LayoutComponent) CalculateSize(getFont GetFontCallback, maxViewpor
 	var xAxisParentSize float32
 	var yAxisParentSize float32
 
-	switch layout.direciton {
+	switch layout.direction {
 	case DirectionColumn:
 		yAxisSizes = getArrayOfYAxisFromVector2(childrenSizes)
 		xAxisSizes = getArrayOfXAxisFromVector2(childrenSizes)
@@ -254,7 +254,7 @@ func (layout *LayoutComponent) CalculateSize(getFont GetFontCallback, maxViewpor
 		yAxisPositions, yAxisParentSize = layout.calculateChildPositionsAndParentSizeForCrossAxis(yAxisSizes, maxViewport.Y)
 		break
 	default:
-		panic(fmt.Sprintf("Unhandled direction parameter value in layout component: %d", layout.direciton))
+		panic(fmt.Sprintf("Unhandled direction parameter value in layout component: %d", layout.direction))
 	}
 
 	positions := joinFloatArraysToVector2Array(xAxisPositions, yAxisPositions)
