@@ -294,3 +294,7 @@ func (layout *LayoutComponent) SetPositionOffset(offset rl.Vector2) {
 func (layout *LayoutComponent) AddChild(child Component) {
 	layout.children = append(layout.children, child)
 }
+
+func (layout *LayoutComponent) GetPosition() rl.Vector2 {
+	return layout.position.Calculate()
+}

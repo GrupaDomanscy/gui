@@ -53,3 +53,7 @@ func (comp *TextComponent) Render(getFont GetFontCallback) {
 
 	rl.DrawTextEx(font, comp.text, comp.position.Calculate(), comp.fontSize, comp.spacing, comp.color)
 }
+
+func (text *TextComponent) GetPosition() rl.Vector2 {
+	return text.position.Calculate()
+}
