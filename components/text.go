@@ -1,6 +1,8 @@
 package components
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -52,4 +54,10 @@ func (comp *TextComponent) Render(getFont GetFontCallback) {
 	}
 
 	rl.DrawTextEx(font, comp.text, comp.position.Calculate(), comp.fontSize, comp.spacing, comp.color)
+}
+
+func (comp *TextComponent) GetHash() []byte {
+	var b bytes.Buffer
+	gob.NewEncoder(&b).Encode(comp)
+	return b.Bytes()
 }

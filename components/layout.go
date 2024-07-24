@@ -1,6 +1,8 @@
 package components
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -297,4 +299,10 @@ func (layout *LayoutComponent) SetPositionOffset(offset rl.Vector2) {
 
 func (layout *LayoutComponent) AddChild(child Component) {
 	layout.children = append(layout.children, child)
+}
+
+func (layout *LayoutComponent) GetHash() []byte {
+	var b bytes.Buffer
+	gob.NewEncoder(&b).Encode(layout)
+	return b.Bytes()
 }

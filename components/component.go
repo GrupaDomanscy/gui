@@ -9,4 +9,5 @@ type Component interface {
 	CalculateSize(getFont GetFontCallback, maxViewport rl.Vector2) rl.Vector2
 	SetPosition(rl.Vector2)
 	SetPositionOffset(rl.Vector2)
+	GetHash() []byte
 }
