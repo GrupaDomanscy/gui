@@ -2,6 +2,7 @@ package gui
 
 import (
 	"errors"
+	"runtime"
 
 	"domanscy.group/gui/components"
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -18,6 +19,10 @@ type App struct {
 }
 
 func newApp(title string, initialSize rl.Vector2, root components.Component, routine AppRoutine) *App {
+	// This lock os thread thing protects from crashing in tests when loading fonts.
+	// I don't know exactly why it works, but it works.
+	runtime.LockOSThread()
+
 	app := &App{
 		title:       title,
 		rootElement: root,
@@ -27,13 +32,21 @@ func newApp(title string, initialSize rl.Vector2, root components.Component, rou
 
 	rl.InitWindow(int32(initialSize.X), int32(initialSize.Y), app.title)
 
+	for !rl.IsWindowReady() {
+		// ...
+	}
+
 	return app
 }
 
 func (app *App) run() {
 	app.rootElement.CalculateSize(app.getFont, rl.Vector2{X: float32(rl.GetRenderWidth()), Y: float32(rl.GetRenderHeight())})
 
+	defer app.unloadAllFonts()
 	defer rl.CloseWindow()
+	// This lock os thread thing protects from crashing in tests when loading fonts.
+	// I don't know exactly why it works, but it works.
+	defer runtime.UnlockOSThread()
 
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
@@ -66,6 +79,12 @@ func (app *App) loadFont(fontName string, fontFilePath string) {
 	font := rl.LoadFontEx(fontFilePath, 32, nil, 1024)
 
 	app.fontStore[fontName] = font
+}
+
+func (app *App) unloadAllFonts() {
+	for _, font := range app.fontStore {
+		rl.UnloadFont(font)
+	}
 }
 
 func (app *App) getFont(fontName string) (rl.Font, error) {
