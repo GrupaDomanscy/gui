@@ -18,6 +18,8 @@ type LayoutComponent struct {
 	direciton          int
 	mainAxisAlignment  int
 	crossAxisAlignment int
+
+	position ComponentPosition
 }
 
 func NewLayoutComponent(direction int, mainAxisAlignment int, crossAxisAlignment int) *LayoutComponent {
@@ -37,6 +39,7 @@ func NewLayoutComponent(direction int, mainAxisAlignment int, crossAxisAlignment
 		children:           make([]Component, 0),
 		mainAxisAlignment:  mainAxisAlignment,
 		crossAxisAlignment: crossAxisAlignment,
+		position:           NewComponentPosition(),
 	}
 }
 
@@ -211,4 +214,24 @@ func (layout *LayoutComponent) CalculateSize(maxViewport rl.Vector2) rl.Vector2 
 
 func (layout *LayoutComponent) Render(getFont GetFontCallback) {
 
+}
+
+func (layout *LayoutComponent) SetPosition(pos rl.Vector2) {
+	layout.position.Position = pos
+
+	newLayoutPosition := layout.position.Calculate()
+
+	for _, child := range layout.children {
+		child.SetPositionOffset(newLayoutPosition)
+	}
+}
+
+func (layout *LayoutComponent) SetPositionOffset(offset rl.Vector2) {
+	layout.position.Offset = offset
+
+	newLayoutPosition := layout.position.Calculate()
+
+	for _, child := range layout.children {
+		child.SetPositionOffset(newLayoutPosition)
+	}
 }

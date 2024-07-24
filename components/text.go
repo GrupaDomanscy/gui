@@ -14,7 +14,7 @@ type TextComponent struct {
 	fontSize float32
 	spacing  float32
 	color    rl.Color
-	position rl.Vector2
+	position ComponentPosition
 }
 
 func NewTextComponent(text string, loadedFontName string, fontSize float32, spacing float32, color rl.Color) *TextComponent {
@@ -24,8 +24,16 @@ func NewTextComponent(text string, loadedFontName string, fontSize float32, spac
 		fontSize: fontSize,
 		spacing:  spacing,
 		color:    color,
-		position: rl.Vector2Zero(),
+		position: NewComponentPosition(),
 	}
+}
+
+func (comp *TextComponent) SetPosition(pos rl.Vector2) {
+	comp.position.Position = pos
+}
+
+func (comp *TextComponent) SetPositionOffset(offset rl.Vector2) {
+	comp.position.Offset = offset
 }
 
 func (comp *TextComponent) Render(getFont GetFontCallback) {
@@ -34,5 +42,5 @@ func (comp *TextComponent) Render(getFont GetFontCallback) {
 		panic(fmt.Sprintf("Provided font (%s) is not loaded into memory", comp.fontName, err))
 	}
 
-	rl.DrawTextEx(font, comp.text, comp.position, comp.fontSize, comp.spacing, comp.color)
+	rl.DrawTextEx(font, comp.text, comp.position.Calculate(), comp.fontSize, comp.spacing, comp.color)
 }
