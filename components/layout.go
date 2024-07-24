@@ -37,6 +37,7 @@ func NewLayoutComponent(direction int, mainAxisAlignment int, crossAxisAlignment
 
 	return &LayoutComponent{
 		children:           make([]Component, 0),
+		direction:          direction,
 		mainAxisAlignment:  mainAxisAlignment,
 		crossAxisAlignment: crossAxisAlignment,
 		position:           NewComponentPosition(),
@@ -230,8 +231,9 @@ func joinFloatArraysToVector2Array(xArr []float32, yArr []float32) []rl.Vector2 
 func (layout *LayoutComponent) CalculateSize(getFont GetFontCallback, maxViewport rl.Vector2) rl.Vector2 {
 	childrenSizes := layout.calculateSizesOfChildren(getFont, maxViewport)
 
-	var xAxisSizes []float32
-	var yAxisSizes []float32
+	xAxisSizes := getArrayOfXAxisFromVector2(childrenSizes)
+	yAxisSizes := getArrayOfYAxisFromVector2(childrenSizes)
+
 	var xAxisPositions []float32
 	var yAxisPositions []float32
 
@@ -240,16 +242,10 @@ func (layout *LayoutComponent) CalculateSize(getFont GetFontCallback, maxViewpor
 
 	switch layout.direction {
 	case DirectionColumn:
-		yAxisSizes = getArrayOfYAxisFromVector2(childrenSizes)
-		xAxisSizes = getArrayOfXAxisFromVector2(childrenSizes)
-
 		yAxisPositions, yAxisParentSize = layout.calculateChildPositionsAndParentSizeForMainAxis(yAxisSizes, maxViewport.Y)
 		xAxisPositions, xAxisParentSize = layout.calculateChildPositionsAndParentSizeForCrossAxis(xAxisSizes, maxViewport.X)
 		break
 	case DirectionRow:
-		xAxisSizes = getArrayOfXAxisFromVector2(childrenSizes)
-		yAxisSizes = getArrayOfYAxisFromVector2(childrenSizes)
-
 		xAxisPositions, xAxisParentSize = layout.calculateChildPositionsAndParentSizeForMainAxis(xAxisSizes, maxViewport.X)
 		yAxisPositions, yAxisParentSize = layout.calculateChildPositionsAndParentSizeForCrossAxis(yAxisSizes, maxViewport.Y)
 		break
