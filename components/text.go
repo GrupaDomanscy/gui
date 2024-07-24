@@ -36,10 +36,19 @@ func (comp *TextComponent) SetPositionOffset(offset rl.Vector2) {
 	comp.position.Offset = offset
 }
 
+func (comp *TextComponent) CalculateSize(getFont GetFontCallback, maxViewport rl.Vector2) rl.Vector2 {
+	font, err := getFont(comp.fontName)
+	if err != nil {
+		panic(fmt.Sprintf("Provided font (%s) is not loaded into memory", comp.fontName))
+	}
+
+	return rl.MeasureTextEx(font, comp.text, comp.fontSize, comp.spacing)
+}
+
 func (comp *TextComponent) Render(getFont GetFontCallback) {
 	font, err := getFont(comp.fontName)
 	if err != nil {
-		panic(fmt.Sprintf("Provided font (%s) is not loaded into memory", comp.fontName, err))
+		panic(fmt.Sprintf("Provided font (%s) is not loaded into memory", comp.fontName))
 	}
 
 	rl.DrawTextEx(font, comp.text, comp.position.Calculate(), comp.fontSize, comp.spacing, comp.color)

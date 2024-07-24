@@ -43,14 +43,14 @@ func NewLayoutComponent(direction int, mainAxisAlignment int, crossAxisAlignment
 	}
 }
 
-func (layout *LayoutComponent) calculateSizesOfChildren(maxViewport rl.Vector2) []rl.Vector2 {
+func (layout *LayoutComponent) calculateSizesOfChildren(getFont GetFontCallback, maxViewport rl.Vector2) []rl.Vector2 {
 	sizes := make([]rl.Vector2, len(layout.children))
 
 	currentMaxViewport := maxViewport
 
 	if layout.direciton == DirectionColumn {
 		for i, child := range layout.children {
-			childSize := child.CalculateSize(currentMaxViewport)
+			childSize := child.CalculateSize(getFont, currentMaxViewport)
 
 			sizes[i] = childSize
 
@@ -58,7 +58,7 @@ func (layout *LayoutComponent) calculateSizesOfChildren(maxViewport rl.Vector2) 
 		}
 	} else {
 		for i, child := range layout.children {
-			childSize := child.CalculateSize(currentMaxViewport)
+			childSize := child.CalculateSize(getFont, currentMaxViewport)
 
 			sizes[i] = childSize
 
@@ -99,8 +99,8 @@ func sum[T float32](values []T) T {
 	return result
 }
 
-func (layout *LayoutComponent) calculatePositionForMainAxis(sizes []float32, maxViewport float32) []float32 {
-	positions := make([]float32, len(sizes))
+func (layout *LayoutComponent) calculateChildPositionsAndParentSizeForMainAxis(sizes []float32, maxViewport float32) (positions []float32, parentSize float32) {
+	positions = make([]float32, len(sizes))
 
 	var currentPos float32
 
@@ -111,7 +111,9 @@ func (layout *LayoutComponent) calculatePositionForMainAxis(sizes []float32, max
 		for i, size := range sizes {
 			positions[i] = currentPos
 			currentPos += size
+			parentSize += size
 		}
+
 		break
 	case AlignCenter:
 		sizeSum := sum(sizes)
@@ -120,6 +122,12 @@ func (layout *LayoutComponent) calculatePositionForMainAxis(sizes []float32, max
 		for i, size := range sizes {
 			positions[i] = currentPos
 			currentPos += size
+		}
+
+		if sizeSum > maxViewport {
+			parentSize = sizeSum
+		} else {
+			parentSize = maxViewport
 		}
 		break
 	case AlignEnd:
@@ -130,40 +138,78 @@ func (layout *LayoutComponent) calculatePositionForMainAxis(sizes []float32, max
 			positions[i] = currentPos
 			currentPos += size
 		}
+
+		if sizeSum > maxViewport {
+			parentSize = sizeSum
+		} else {
+			parentSize = maxViewport
+		}
 		break
 	default:
 		panic(fmt.Sprintf("Unhandled main axis alignment value: %d", layout.mainAxisAlignment))
 	}
 
-	return positions
+	return
 }
 
-func (layout *LayoutComponent) calculatePositionForCrossAxis(sizes []float32, maxViewport float32) []float32 {
-	positions := make([]float32, len(sizes))
+func (layout *LayoutComponent) calculateChildPositionsAndParentSizeForCrossAxis(sizes []float32, maxViewport float32) (positions []float32, parentSize float32) {
+	positions = make([]float32, len(sizes))
 
 	switch layout.crossAxisAlignment {
 	case AlignStart:
+		var maxChildSize float32 = 0
+
 		for i := 0; i < len(sizes); i++ {
 			positions[i] = 0
+
+			if sizes[i] > maxChildSize {
+				maxChildSize = sizes[i]
+			}
 		}
+
+		parentSize = maxChildSize
 		break
 	case AlignCenter:
+		var maxChildSize float32 = 0
+
 		center := maxViewport / 2
 
 		for i := 0; i < len(sizes); i++ {
 			positions[i] = center - (sizes[i] / 2)
+
+			if sizes[i] > maxChildSize {
+				maxChildSize = sizes[i]
+			}
+		}
+
+		if maxChildSize > maxViewport {
+			parentSize = maxChildSize
+		} else {
+			parentSize = maxViewport
 		}
 		break
 	case AlignEnd:
+		var maxChildSize float32 = 0
+
 		for i := 0; i < len(sizes); i++ {
 			positions[i] = maxViewport - sizes[i]
+
+			if sizes[i] > maxChildSize {
+				maxChildSize = sizes[i]
+			}
+		}
+
+		if maxChildSize > maxViewport {
+			parentSize = maxChildSize
+		} else {
+			parentSize = maxViewport
 		}
 		break
 	default:
 		panic(fmt.Sprintf("Unhandled cross axis alignment value: %d", layout.crossAxisAlignment))
 	}
 
-	return positions
+	return
 }
 
 func joinFloatArraysToVector2Array(xArr []float32, yArr []float32) []rl.Vector2 {
@@ -181,28 +227,31 @@ func joinFloatArraysToVector2Array(xArr []float32, yArr []float32) []rl.Vector2 
 	return joinedArr
 }
 
-func (layout *LayoutComponent) CalculateSize(maxViewport rl.Vector2) rl.Vector2 {
-	childrenSizes := layout.calculateSizesOfChildren(maxViewport)
+func (layout *LayoutComponent) CalculateSize(getFont GetFontCallback, maxViewport rl.Vector2) rl.Vector2 {
+	childrenSizes := layout.calculateSizesOfChildren(getFont, maxViewport)
 
 	var xAxisSizes []float32
 	var yAxisSizes []float32
 	var xAxisPositions []float32
 	var yAxisPositions []float32
 
+	var xAxisParentSize float32
+	var yAxisParentSize float32
+
 	switch layout.direciton {
 	case DirectionColumn:
 		yAxisSizes = getArrayOfYAxisFromVector2(childrenSizes)
 		xAxisSizes = getArrayOfYAxisFromVector2(childrenSizes)
 
-		yAxisPositions = layout.calculatePositionForMainAxis(yAxisSizes, maxViewport.Y)
-		xAxisPositions = layout.calculatePositionForCrossAxis(xAxisSizes, maxViewport.X)
+		yAxisPositions, yAxisParentSize = layout.calculateChildPositionsAndParentSizeForMainAxis(yAxisSizes, maxViewport.Y)
+		xAxisPositions, xAxisParentSize = layout.calculateChildPositionsAndParentSizeForCrossAxis(xAxisSizes, maxViewport.X)
 		break
 	case DirectionRow:
 		xAxisSizes = getArrayOfXAxisFromVector2(childrenSizes)
 		yAxisSizes = getArrayOfYAxisFromVector2(childrenSizes)
 
-		xAxisPositions = layout.calculatePositionForMainAxis(xAxisSizes, maxViewport.X)
-		yAxisPositions = layout.calculatePositionForCrossAxis(yAxisSizes, maxViewport.Y)
+		xAxisPositions, xAxisParentSize = layout.calculateChildPositionsAndParentSizeForMainAxis(xAxisSizes, maxViewport.X)
+		yAxisPositions, yAxisParentSize = layout.calculateChildPositionsAndParentSizeForCrossAxis(yAxisSizes, maxViewport.Y)
 		break
 	default:
 		panic(fmt.Sprintf("Unhandled direction parameter value in layout component: %d", layout.direciton))
@@ -210,10 +259,21 @@ func (layout *LayoutComponent) CalculateSize(maxViewport rl.Vector2) rl.Vector2 
 
 	positions := joinFloatArraysToVector2Array(xAxisPositions, yAxisPositions)
 
+	for i, child := range layout.children {
+		child.SetPosition(positions[i])
+	}
+
+	//TODO: Finish this funciton properly
+	return rl.Vector2{
+		X: xAxisParentSize,
+		Y: yAxisParentSize,
+	}
 }
 
 func (layout *LayoutComponent) Render(getFont GetFontCallback) {
-
+	for _, child := range layout.children {
+		child.Render(getFont)
+	}
 }
 
 func (layout *LayoutComponent) SetPosition(pos rl.Vector2) {
@@ -234,4 +294,8 @@ func (layout *LayoutComponent) SetPositionOffset(offset rl.Vector2) {
 	for _, child := range layout.children {
 		child.SetPositionOffset(newLayoutPosition)
 	}
+}
+
+func (layout *LayoutComponent) AddChild(child Component) {
+	layout.children = append(layout.children, child)
 }

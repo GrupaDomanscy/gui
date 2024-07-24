@@ -6,7 +6,7 @@ type GetFontCallback = func(fontName string) (rl.Font, error)
 
 type Component interface {
 	Render(GetFontCallback)
-	CalculateSize(maxViewport rl.Vector2) rl.Vector2
+	CalculateSize(getFont GetFontCallback, maxViewport rl.Vector2) rl.Vector2
 	SetPosition(rl.Vector2)
 	SetPositionOffset(rl.Vector2)
 }

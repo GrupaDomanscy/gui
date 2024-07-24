@@ -27,6 +27,8 @@ func newApp(title string, initialSize rl.Vector2, root components.Component) *Ap
 }
 
 func (app *App) run() {
+	app.rootElement.CalculateSize(app.getFont, rl.Vector2{X: float32(rl.GetRenderWidth()), Y: float32(rl.GetRenderHeight())})
+
 	defer rl.CloseWindow()
 
 	for !rl.WindowShouldClose() {
