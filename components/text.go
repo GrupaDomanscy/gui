@@ -19,6 +19,8 @@ type TextComponent struct {
 	spacing       float32
 	color         rl.Color
 	position      ComponentPosition
+
+	eventStore *atoms.EventStore
 }
 
 func NewTextComponent(text string, loadedFontName string, fontSize float32, spacing float32, color rl.Color) *TextComponent {
@@ -31,11 +33,12 @@ func NewTextComponent(text string, loadedFontName string, fontSize float32, spac
 		spacing:       spacing,
 		color:         color,
 		position:      NewComponentPosition(),
+		eventStore:    atoms.NewEventStore(),
 	}
 }
 
-func (component *TextComponent) SetWrapText(wrap bool) {
-	component.wrapText = wrap
+func (comp *TextComponent) SetWrapText(wrap bool) {
+	comp.wrapText = wrap
 }
 
 func wrapText(font atoms.Font, text string, maxWidth float32) (processedText string, calculatedSize rl.Vector2) {
@@ -163,6 +166,14 @@ func (comp *TextComponent) Render(getFont GetFontCallback) {
 	rl.DrawTextEx(font, comp.processedText, comp.position.Calculate(), comp.fontSize, comp.spacing, comp.color)
 }
 
-func (text *TextComponent) GetPosition() rl.Vector2 {
-	return text.position.Calculate()
+func (comp *TextComponent) GetPosition() rl.Vector2 {
+	return comp.position.Calculate()
+}
+
+func (comp *TextComponent) GetEventBus() *atoms.EventStore {
+	return comp.eventStore
+}
+
+func (comp *TextComponent) PropagateEvent(eventType string, args ...interface{}) {
+	comp.GetEventBus().DispatchEvent(eventType, args...)
 }
