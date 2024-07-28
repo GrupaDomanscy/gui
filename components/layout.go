@@ -1,6 +1,7 @@
 package components
 
 import (
+	"domanscy.group/gui/components/atoms"
 	"fmt"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -20,6 +21,8 @@ type LayoutComponent struct {
 	crossAxisAlignment int
 
 	position ComponentPosition
+
+	eventBus *atoms.EventStore
 }
 
 func NewLayoutComponent(direction int, mainAxisAlignment int, crossAxisAlignment int) *LayoutComponent {
@@ -297,4 +300,16 @@ func (layout *LayoutComponent) AddChild(child Component) {
 
 func (layout *LayoutComponent) GetPosition() rl.Vector2 {
 	return layout.position.Calculate()
+}
+
+func (layout *LayoutComponent) GetEventBus() *atoms.EventStore {
+	return layout.eventBus
+}
+
+func (layout *LayoutComponent) PropagateEvent(eventType string, args ...interface{}) {
+	layout.eventBus.DispatchEvent(eventType, args...)
+
+	for _, child := range layout.children {
+		child.PropagateEvent(eventType, args...)
+	}
 }

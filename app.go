@@ -16,6 +16,8 @@ type App struct {
 
 	fontStore map[string]rl.Font
 	routine   AppRoutine
+
+	windowSize rl.Vector2
 }
 
 func newApp(title string, initialSize rl.Vector2, root components.Component, routine AppRoutine) *App {
@@ -28,9 +30,12 @@ func newApp(title string, initialSize rl.Vector2, root components.Component, rou
 		rootElement: root,
 		fontStore:   map[string]rl.Font{},
 		routine:     routine,
+		windowSize:  initialSize,
 	}
 
 	rl.InitWindow(int32(initialSize.X), int32(initialSize.Y), app.title)
+
+	rl.SetWindowState(rl.FlagWindowResizable)
 
 	for !rl.IsWindowReady() {
 		// ...
@@ -49,6 +54,18 @@ func (app *App) run() {
 	defer runtime.UnlockOSThread()
 
 	for !rl.WindowShouldClose() {
+		// window resize event thingies
+		newWindowSize := rlGetWindowSize()
+
+		if !rl.Vector2Equals(newWindowSize, app.windowSize) {
+			oldWindowSize := app.windowSize
+			app.windowSize = newWindowSize
+
+			app.rootElement.PropagateEvent("gui:window-resize", oldWindowSize, app.windowSize)
+			app.rootElement.CalculateSize(app.getFont, app.windowSize)
+		}
+
+		// the rest
 		rl.BeginDrawing()
 
 		rl.ClearBackground(rl.Black)
@@ -66,6 +83,13 @@ func (app *App) run() {
 		} else {
 			rl.EndDrawing()
 		}
+	}
+}
+
+func rlGetWindowSize() rl.Vector2 {
+	return rl.Vector2{
+		X: float32(rl.GetRenderWidth()),
+		Y: float32(rl.GetRenderHeight()),
 	}
 }
 

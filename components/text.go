@@ -2,30 +2,131 @@ package components
 
 import (
 	"fmt"
+	"strings"
 
+	"domanscy.group/gui/components/atoms"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 type TextComponent struct {
 	Component
 
-	text     string
-	fontName string
-	fontSize float32
-	spacing  float32
-	color    rl.Color
-	position ComponentPosition
+	text          string
+	processedText string
+	wrapText      bool
+	fontName      string
+	fontSize      float32
+	spacing       float32
+	color         rl.Color
+	position      ComponentPosition
+
+	eventStore *atoms.EventStore
 }
 
 func NewTextComponent(text string, loadedFontName string, fontSize float32, spacing float32, color rl.Color) *TextComponent {
 	return &TextComponent{
-		text:     text,
-		fontName: loadedFontName,
-		fontSize: fontSize,
-		spacing:  spacing,
-		color:    color,
-		position: NewComponentPosition(),
+		text:          text,
+		processedText: "",
+		wrapText:      false,
+		fontName:      loadedFontName,
+		fontSize:      fontSize,
+		spacing:       spacing,
+		color:         color,
+		position:      NewComponentPosition(),
+		eventStore:    atoms.NewEventStore(),
 	}
+}
+
+func (comp *TextComponent) SetWrapText(wrap bool) {
+	comp.wrapText = wrap
+}
+
+func wrapText(font atoms.Font, text string, maxWidth float32) (processedText string, calculatedSize rl.Vector2) {
+	type IterationState struct {
+		wrappedText      strings.Builder
+		currentLineText  strings.Builder
+		currentLineWidth float32
+	}
+
+	processEndOfInput := func(state *IterationState) {
+		state.wrappedText.WriteString(state.currentLineText.String())
+		calculatedSize.Y += font.LineHeight()
+
+		if state.currentLineWidth > calculatedSize.X {
+			calculatedSize.X = state.currentLineWidth
+		}
+	}
+
+	processEndOfLine := func(state *IterationState) {
+		if state.currentLineWidth > calculatedSize.X {
+			calculatedSize.X = state.currentLineWidth
+		}
+
+		state.wrappedText.WriteString(strings.Trim(state.currentLineText.String(), " "))
+		state.currentLineText.Reset()
+
+		state.currentLineWidth = 0
+		state.wrappedText.WriteRune('\n')
+
+		calculatedSize.Y += font.LineHeight()
+	}
+
+	lastWhitespaceCharacterIndex := -1
+	lastWhitespaceCharacterState := IterationState{}
+	previousCharacterState := IterationState{}
+	state := IterationState{}
+
+	runes := []rune(text)
+
+	for characterIndex := 0; characterIndex < len(runes); characterIndex++ {
+		character := runes[characterIndex]
+
+		previousCharacterState = state
+
+		if character == '\n' {
+			processEndOfLine(&state)
+			continue
+		}
+
+		glyphWidth := font.GlyphWidth(character)
+
+		if state.currentLineWidth+glyphWidth > maxWidth {
+			if state.currentLineText.Len() == 1 {
+				panic("Length of state.currentLineText is equal to 1, unhandled variant.")
+			}
+
+			if lastWhitespaceCharacterIndex != -1 {
+				state = lastWhitespaceCharacterState
+				characterIndex = lastWhitespaceCharacterIndex
+			} else {
+				state = previousCharacterState
+				characterIndex -= 1
+			}
+
+			lastWhitespaceCharacterIndex = -1
+			processEndOfLine(&state)
+
+			continue
+		}
+
+		if character == ' ' && state.currentLineText.Len() == 0 {
+			continue
+		}
+
+		state.currentLineText.WriteRune(character)
+		state.currentLineWidth += glyphWidth
+
+		if character == ' ' {
+			lastWhitespaceCharacterIndex = characterIndex
+			lastWhitespaceCharacterState = state
+		}
+	}
+
+	processEndOfInput(&state)
+
+	processedText = state.wrappedText.String()
+
+	return
 }
 
 func (comp *TextComponent) SetPosition(pos rl.Vector2) {
@@ -42,7 +143,18 @@ func (comp *TextComponent) CalculateSize(getFont GetFontCallback, maxViewport rl
 		panic(fmt.Sprintf("Provided font (%s) is not loaded into memory", comp.fontName))
 	}
 
-	return rl.MeasureTextEx(font, comp.text, comp.fontSize, comp.spacing)
+	var calculatedSize rl.Vector2
+
+	if !comp.wrapText {
+		calculatedSize = rl.MeasureTextEx(font, comp.text, comp.fontSize, comp.spacing)
+		comp.processedText = comp.text
+
+		return calculatedSize
+	} else {
+		comp.processedText, calculatedSize = wrapText(atoms.NewRaylibFont(font, comp.fontSize, comp.spacing), comp.text, maxViewport.X)
+
+		return calculatedSize
+	}
 }
 
 func (comp *TextComponent) Render(getFont GetFontCallback) {
@@ -51,9 +163,17 @@ func (comp *TextComponent) Render(getFont GetFontCallback) {
 		panic(fmt.Sprintf("Provided font (%s) is not loaded into memory", comp.fontName))
 	}
 
-	rl.DrawTextEx(font, comp.text, comp.position.Calculate(), comp.fontSize, comp.spacing, comp.color)
+	rl.DrawTextEx(font, comp.processedText, comp.position.Calculate(), comp.fontSize, comp.spacing, comp.color)
 }
 
-func (text *TextComponent) GetPosition() rl.Vector2 {
-	return text.position.Calculate()
+func (comp *TextComponent) GetPosition() rl.Vector2 {
+	return comp.position.Calculate()
+}
+
+func (comp *TextComponent) GetEventBus() *atoms.EventStore {
+	return comp.eventStore
+}
+
+func (comp *TextComponent) PropagateEvent(eventType string, args ...interface{}) {
+	comp.GetEventBus().DispatchEvent(eventType, args...)
 }
