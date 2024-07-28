@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"domanscy.group/gui/components/atoms"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -37,61 +38,40 @@ func (component *TextComponent) SetWrapText(wrap bool) {
 	component.wrapText = wrap
 }
 
-func getGlyphWidth(font *rl.Font, glyph int32) float32 {
-	glyphInfo := rl.GetGlyphInfo(*font, glyph)
-
-	if glyphInfo.AdvanceX != 0 {
-		return float32(glyphInfo.AdvanceX)
-	} else {
-		return (*font).Recs.Width + float32(glyphInfo.OffsetX)
-	}
-}
-
-func wrapText(font rl.Font, text string, fontSize float32, spacing float32, maxWidth float32) (processedText string, calculatedSize rl.Vector2) {
+func wrapText(font atoms.Font, text string, maxWidth float32) (processedText string, calculatedSize rl.Vector2) {
 	type IterationState struct {
-		wrappedText                  strings.Builder
-		currentLineText              strings.Builder
-		currentLineWidth             float32
-		defaultLineHeight            float32 // this is bullshit, we have for ex. arabic characters which break this rule
-		lastWhitespaceCharacterIndex int
+		wrappedText      strings.Builder
+		currentLineText  strings.Builder
+		currentLineWidth float32
 	}
-
-	fontScalingFactor := float32(font.BaseSize) / fontSize
 
 	processEndOfInput := func(state *IterationState) {
 		state.wrappedText.WriteString(state.currentLineText.String())
-		calculatedSize.Y += state.defaultLineHeight
+		calculatedSize.Y += font.LineHeight()
 
 		if state.currentLineWidth > calculatedSize.X {
-			calculatedSize.X = state.currentLineWidth * fontScalingFactor
+			calculatedSize.X = state.currentLineWidth
 		}
 	}
 
 	processEndOfLine := func(state *IterationState) {
 		if state.currentLineWidth > calculatedSize.X {
-			calculatedSize.X = state.currentLineWidth * fontScalingFactor
+			calculatedSize.X = state.currentLineWidth
 		}
 
-		state.wrappedText.WriteString(state.currentLineText.String())
+		state.wrappedText.WriteString(strings.Trim(state.currentLineText.String(), " "))
 		state.currentLineText.Reset()
 
 		state.currentLineWidth = 0
-		state.currentLineText.WriteRune('\n')
+		state.wrappedText.WriteRune('\n')
 
-		calculatedSize.Y += state.defaultLineHeight
+		calculatedSize.Y += font.LineHeight()
 	}
 
-	previousCharacterState := IterationState{
-		lastWhitespaceCharacterIndex: -1,
-		currentLineWidth:             0,
-		defaultLineHeight:            fontSize,
-	}
-
-	state := IterationState{
-		lastWhitespaceCharacterIndex: -1,
-		currentLineWidth:             0,
-		defaultLineHeight:            fontSize,
-	}
+	lastWhitespaceCharacterIndex := -1
+	lastWhitespaceCharacterState := IterationState{}
+	previousCharacterState := IterationState{}
+	state := IterationState{}
 
 	runes := []rune(text)
 
@@ -100,28 +80,42 @@ func wrapText(font rl.Font, text string, fontSize float32, spacing float32, maxW
 
 		previousCharacterState = state
 
-		if character == ' ' {
-			state.lastWhitespaceCharacterIndex = characterIndex
-		}
-
-		state.currentLineText.WriteRune(character)
-
 		if character == '\n' {
 			processEndOfLine(&state)
+			continue
 		}
 
-		glyphWidth := getGlyphWidth(&font, character)
-		state.currentLineWidth += glyphWidth
+		glyphWidth := font.GlyphWidth(character)
 
-		if state.currentLineWidth > maxWidth {
+		if state.currentLineWidth+glyphWidth > maxWidth {
 			if state.currentLineText.Len() == 1 {
 				panic("Length of state.currentLineText is equal to 1, unhandled variant.")
 			}
 
-			state = previousCharacterState
-			characterIndex -= 1
+			if lastWhitespaceCharacterIndex != -1 {
+				state = lastWhitespaceCharacterState
+				characterIndex = lastWhitespaceCharacterIndex
+			} else {
+				state = previousCharacterState
+				characterIndex -= 1
+			}
 
+			lastWhitespaceCharacterIndex = -1
 			processEndOfLine(&state)
+
+			continue
+		}
+
+		if character == ' ' && state.currentLineText.Len() == 0 {
+			continue
+		}
+
+		state.currentLineText.WriteRune(character)
+		state.currentLineWidth += glyphWidth
+
+		if character == ' ' {
+			lastWhitespaceCharacterIndex = characterIndex
+			lastWhitespaceCharacterState = state
 		}
 	}
 
@@ -154,7 +148,7 @@ func (comp *TextComponent) CalculateSize(getFont GetFontCallback, maxViewport rl
 
 		return calculatedSize
 	} else {
-		comp.processedText, calculatedSize = wrapText(font, comp.text, comp.fontSize, comp.spacing, maxViewport.X)
+		comp.processedText, calculatedSize = wrapText(atoms.NewRaylibFont(font, comp.fontSize, comp.spacing), comp.text, maxViewport.X)
 
 		return calculatedSize
 	}
