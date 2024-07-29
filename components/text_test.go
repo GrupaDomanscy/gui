@@ -1,8 +1,9 @@
 package components
 
 import (
-	rl "github.com/gen2brain/raylib-go/raylib"
 	"testing"
+
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 type TestFont struct {
@@ -32,8 +33,8 @@ func TestWrapText(t *testing.T) {
 
 		expectedText := "Hello\nworld\n,\nhow\nare\nyou\ntoday\n?"
 		expectedSize := rl.Vector2{
-			X: 32 * 5,
-			Y: 32 * 8,
+			X: (32 * 5),
+			Y: (32 * 8) + (2 * 7), // there is text spacing between each line
 		}
 
 		processedText, size := wrapText(testFont, "Hello world, how are you today?", 32*5) // max 5 characters in one line
