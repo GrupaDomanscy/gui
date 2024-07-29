@@ -6,13 +6,13 @@ type ChangeWindowSizeEventCallback = func(oldWindowSize rl.Vector2, newWindowSiz
 
 type EventCallback = func(...interface{})
 
-type EventStore struct {
+type EventBus struct {
 	callbacks map[string]map[int]EventCallback
 	nextId    int
 }
 
-func NewEventStore() *EventStore {
-	instance := &EventStore{
+func NewEventBus() *EventBus {
+	instance := &EventBus{
 		callbacks: map[string]map[int]EventCallback{},
 		nextId:    1,
 	}
@@ -20,10 +20,10 @@ func NewEventStore() *EventStore {
 	return instance
 }
 
-func (evStore *EventStore) ListenToEvent(eventType string, callback EventCallback) (eventId int) {
+func (evStore *EventBus) ListenToEvent(eventType string, callback EventCallback) (eventId int) {
 	eventId = evStore.nextId
 
-	if _, ok := evStore.callbacks[eventType]; ok == false {
+	if _, ok := evStore.callbacks[eventType]; !ok {
 		evStore.callbacks[eventType] = map[int]EventCallback{}
 	}
 
@@ -34,13 +34,13 @@ func (evStore *EventStore) ListenToEvent(eventType string, callback EventCallbac
 	return
 }
 
-func (evStore *EventStore) DispatchEvent(eventType string, args ...interface{}) {
+func (evStore *EventBus) DispatchEvent(eventType string, args ...interface{}) {
 	for _, callback := range evStore.callbacks[eventType] {
 		callback(args...)
 	}
 }
 
-func (evStore *EventStore) RemoveRegisteredEvent(eventId int) {
+func (evStore *EventBus) RemoveRegisteredEvent(eventId int) {
 	for eventType := range evStore.callbacks {
 		delete(evStore.callbacks[eventType], eventId)
 	}
