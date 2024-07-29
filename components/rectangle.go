@@ -14,6 +14,9 @@ type RectangleComponent struct {
 	size rl.Vector2
 
 	backgroundColor rl.Color
+
+	padding   atoms.ClockValues
+	roundness float32
 }
 
 func NewRectangleComponent(eventBus *atoms.EventBus, child Component, backgroundColor rl.Color, roundness float32) *RectangleComponent {
@@ -37,28 +40,45 @@ func (rec *RectangleComponent) SetChild(child Component) {
 	rec.child = child
 }
 
+func (rec *RectangleComponent) getChildPositionOffset() rl.Vector2 {
+	return rl.Vector2Add(rec.GetPosition(), rl.Vector2{
+		X: rec.GetPaddingLeft(),
+		Y: rec.GetPaddingTop(),
+	})
+}
+
 func (rec *RectangleComponent) SetPosition(pos rl.Vector2) {
 	rec.position.Position = pos
 
-	rec.child.SetPositionOffset(rec.child.GetPosition())
+	rec.child.SetPositionOffset(rec.getChildPositionOffset())
 }
 
 func (rec *RectangleComponent) SetPositionOffset(offset rl.Vector2) {
 	rec.position.Offset = offset
 
-	rec.child.SetPositionOffset(rec.child.GetPosition())
+	rec.child.SetPositionOffset(rec.getChildPositionOffset())
 }
 
 func (rec *RectangleComponent) Render(getFont GetFontCallback) {
 	position := rec.GetPosition()
 
 	rl.DrawRectangle(int32(position.X), int32(position.Y), int32(rec.size.X), int32(rec.size.Y), rec.backgroundColor)
+
+	rec.child.Render(getFont)
 }
 
 func (rec *RectangleComponent) CalculateSize(getFont GetFontCallback, maxViewport rl.Vector2) rl.Vector2 {
-	childSize := rec.child.CalculateSize(getFont, maxViewport)
+	childSize := rec.child.CalculateSize(
+		getFont,
+		rl.Vector2Add(
+			maxViewport,
+			rl.Vector2{X: -rec.padding.HorizontalSum(), Y: -rec.padding.VerticalSum()},
+		),
+	)
 
-	rec.size = childSize
+	rec.size = rl.Vector2Add(childSize, rl.Vector2{X: rec.padding.HorizontalSum(), Y: rec.padding.VerticalSum()})
+
+	rec.child.SetPositionOffset(rec.getChildPositionOffset())
 
 	return rec.size
 }
@@ -71,8 +91,38 @@ func (rec *RectangleComponent) GetEventBus() *atoms.EventBus {
 	return rec.eventBus
 }
 
-func (rec *RectangleComponent) PropagateEvent(eventType string, args ...interface{}) {
-	rec.eventBus.DispatchEvent(eventType, args...)
+func (rec *RectangleComponent) GetPaddingTop() float32 {
+	return rec.padding.Top()
+}
 
-	rec.child.PropagateEvent(eventType, args)
+func (rec *RectangleComponent) GetPaddingLeft() float32 {
+	return rec.padding.Left()
+}
+
+func (rec *RectangleComponent) GetPaddingRight() float32 {
+	return rec.padding.Right()
+}
+
+func (rec *RectangleComponent) GetPaddingBottom() float32 {
+	return rec.padding.Bottom()
+}
+
+func (rec *RectangleComponent) SetPaddingTop(value float32) {
+	rec.padding.SetTop(value)
+	rec.eventBus.DispatchEvent("gui:schedule-recalculation", nil)
+}
+
+func (rec *RectangleComponent) SetPaddingLeft(value float32) {
+	rec.padding.SetLeft(value)
+	rec.eventBus.DispatchEvent("gui:schedule-recalculation", nil)
+}
+
+func (rec *RectangleComponent) SetPaddingRight(value float32) {
+	rec.padding.SetRight(value)
+	rec.eventBus.DispatchEvent("gui:schedule-recalculation", nil)
+}
+
+func (rec *RectangleComponent) SetPaddingBottom(value float32) {
+	rec.padding.SetBottom(value)
+	rec.eventBus.DispatchEvent("gui:schedule-recalculation", nil)
 }

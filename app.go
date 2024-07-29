@@ -51,6 +51,12 @@ func newApp(eventBus *atoms.EventBus, title string, initialSize rl.Vector2, root
 func (app *App) run() {
 	app.rootElement.CalculateSize(app.getFont, rl.Vector2{X: float32(rl.GetRenderWidth()), Y: float32(rl.GetRenderHeight())})
 
+	recalculateOnNextFrame := false
+
+	app.eventBus.ListenToEvent("gui:schedule-recalculation", func(args ...interface{}) {
+		recalculateOnNextFrame = true
+	})
+
 	for !rl.WindowShouldClose() {
 		// window resize event thingies
 		newWindowSize := rlGetWindowSize()
@@ -59,8 +65,17 @@ func (app *App) run() {
 			oldWindowSize := app.windowSize
 			app.windowSize = newWindowSize
 
-			app.rootElement.PropagateEvent("gui:window-resize", oldWindowSize, app.windowSize)
+			app.eventBus.DispatchEvent("gui:window-resized", WindowResizedEventArgs{
+				oldWindowSize,
+				newWindowSize,
+			})
+
+			recalculateOnNextFrame = true
+		}
+
+		if recalculateOnNextFrame {
 			app.rootElement.CalculateSize(app.getFont, app.windowSize)
+			recalculateOnNextFrame = false
 		}
 
 		// the rest

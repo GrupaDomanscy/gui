@@ -1,9 +1,9 @@
 package components
 
 import (
-	"domanscy.group/gui/components/atoms"
 	"fmt"
 
+	"domanscy.group/gui/components/atoms"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
