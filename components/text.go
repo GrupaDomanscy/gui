@@ -69,6 +69,11 @@ func wrapText(font atoms.Font, text string, maxWidth float32) (processedText str
 		state.wrappedText.WriteRune('\n')
 
 		calculatedSize.Y += font.LineHeight()
+
+		// This is the line spacing, for more context see original raylib function:
+		// https://github.com/raysan5/raylib/blob/9e39788e077f1d35c5fe54600f2143423a80bb3d/src/rtext.c#L1164
+		// Be aware that text line spacing is a global variable in raylib
+		calculatedSize.Y += 2
 	}
 
 	lastWhitespaceCharacterIndex := -1
