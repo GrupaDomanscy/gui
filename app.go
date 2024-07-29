@@ -47,12 +47,6 @@ func newApp(title string, initialSize rl.Vector2, root components.Component, rou
 func (app *App) run() {
 	app.rootElement.CalculateSize(app.getFont, rl.Vector2{X: float32(rl.GetRenderWidth()), Y: float32(rl.GetRenderHeight())})
 
-	defer app.unloadAllFonts()
-	defer rl.CloseWindow()
-	// This lock os thread thing protects from crashing in tests when loading fonts.
-	// I don't know exactly why it works, but it works.
-	defer runtime.UnlockOSThread()
-
 	for !rl.WindowShouldClose() {
 		// window resize event thingies
 		newWindowSize := rlGetWindowSize()
@@ -84,6 +78,13 @@ func (app *App) run() {
 			rl.EndDrawing()
 		}
 	}
+
+	app.unloadAllFonts()
+	rl.CloseWindow()
+
+	// This lock os thread thing protects from crashing in tests when loading fonts.
+	// I don't know exactly why it works, but it works.
+	runtime.UnlockOSThread()
 }
 
 func rlGetWindowSize() rl.Vector2 {
