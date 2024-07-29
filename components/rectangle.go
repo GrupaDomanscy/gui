@@ -6,7 +6,7 @@ import (
 )
 
 type RectangleComponent struct {
-	eventBus *atoms.EventStore
+	eventBus *atoms.EventBus
 	child    Component
 
 	position ComponentPosition
@@ -16,14 +16,20 @@ type RectangleComponent struct {
 	backgroundColor rl.Color
 }
 
-func NewRectangleComponent(child Component, backgroundColor rl.Color) *RectangleComponent {
+func NewRectangleComponent(eventBus *atoms.EventBus, child Component, backgroundColor rl.Color, roundness float32) *RectangleComponent {
+	if roundness < 0 {
+		panic("Roundness can't be less than 0.")
+	}
+
 	return &RectangleComponent{
-		eventBus: atoms.NewEventStore(),
+		eventBus: eventBus,
 		child:    child,
 		position: NewComponentPosition(),
 
 		size:            rl.Vector2Zero(),
 		backgroundColor: backgroundColor,
+		padding:         atoms.NewClockValues(),
+		roundness:       roundness,
 	}
 }
 
@@ -61,7 +67,7 @@ func (rec *RectangleComponent) GetPosition() rl.Vector2 {
 	return rec.position.Calculate()
 }
 
-func (rec *RectangleComponent) GetEventBus() *atoms.EventStore {
+func (rec *RectangleComponent) GetEventBus() *atoms.EventBus {
 	return rec.eventBus
 }
 

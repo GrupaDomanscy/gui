@@ -20,10 +20,10 @@ type TextComponent struct {
 	color         rl.Color
 	position      ComponentPosition
 
-	eventStore *atoms.EventStore
+	eventBus *atoms.EventBus
 }
 
-func NewTextComponent(text string, loadedFontName string, fontSize float32, spacing float32, color rl.Color) *TextComponent {
+func NewTextComponent(eventBus *atoms.EventBus, text string, loadedFontName string, fontSize float32, spacing float32, color rl.Color) *TextComponent {
 	return &TextComponent{
 		text:          text,
 		processedText: "",
@@ -33,7 +33,7 @@ func NewTextComponent(text string, loadedFontName string, fontSize float32, spac
 		spacing:       spacing,
 		color:         color,
 		position:      NewComponentPosition(),
-		eventStore:    atoms.NewEventStore(),
+		eventBus:      eventBus,
 	}
 }
 
@@ -175,10 +175,6 @@ func (comp *TextComponent) GetPosition() rl.Vector2 {
 	return comp.position.Calculate()
 }
 
-func (comp *TextComponent) GetEventBus() *atoms.EventStore {
-	return comp.eventStore
-}
-
-func (comp *TextComponent) PropagateEvent(eventType string, args ...interface{}) {
-	comp.GetEventBus().DispatchEvent(eventType, args...)
+func (comp *TextComponent) GetEventBus() *atoms.EventBus {
+	return comp.eventBus
 }

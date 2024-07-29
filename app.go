@@ -5,6 +5,7 @@ import (
 	"runtime"
 
 	"domanscy.group/gui/components"
+	"domanscy.group/gui/components/atoms"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -18,9 +19,11 @@ type App struct {
 	routine   AppRoutine
 
 	windowSize rl.Vector2
+
+	eventBus *atoms.EventBus
 }
 
-func newApp(title string, initialSize rl.Vector2, root components.Component, routine AppRoutine) *App {
+func newApp(eventBus *atoms.EventBus, title string, initialSize rl.Vector2, root components.Component, routine AppRoutine) *App {
 	// This lock os thread thing protects from crashing in tests when loading fonts.
 	// I don't know exactly why it works, but it works.
 	runtime.LockOSThread()
@@ -31,6 +34,7 @@ func newApp(title string, initialSize rl.Vector2, root components.Component, rou
 		fontStore:   map[string]rl.Font{},
 		routine:     routine,
 		windowSize:  initialSize,
+		eventBus:    eventBus,
 	}
 
 	rl.InitWindow(int32(initialSize.X), int32(initialSize.Y), app.title)
@@ -128,6 +132,7 @@ type AppBuilder struct {
 	fontsToLoad map[string]string
 	rootElement components.Component
 	appRoutine  AppRoutine
+	eventBus    *atoms.EventBus
 }
 
 func BuildApp() *AppBuilder {
@@ -137,6 +142,7 @@ func BuildApp() *AppBuilder {
 		fontsToLoad: map[string]string{},
 		rootElement: nil,
 		appRoutine:  nil,
+		eventBus:    nil,
 	}
 }
 
@@ -166,8 +172,17 @@ func (builder *AppBuilder) WithAppRoutine(routine AppRoutine) *AppBuilder {
 	return builder
 }
 
+func (builder *AppBuilder) WithEventBus(eventBus *atoms.EventBus) *AppBuilder {
+	builder.eventBus = eventBus
+	return builder
+}
+
 func (builder *AppBuilder) Run() {
-	app := newApp(builder.title, builder.initialSize, builder.rootElement, builder.appRoutine)
+	if builder.eventBus == nil {
+		builder.eventBus = atoms.NewEventBus()
+	}
+
+	app := newApp(builder.eventBus, builder.title, builder.initialSize, builder.rootElement, builder.appRoutine)
 
 	for fontName, fontPath := range builder.fontsToLoad {
 		app.loadFont(fontName, fontPath)

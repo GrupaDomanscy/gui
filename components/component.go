@@ -13,7 +13,5 @@ type Component interface {
 	SetPosition(rl.Vector2)
 	SetPositionOffset(rl.Vector2)
 	GetPosition() rl.Vector2
-
-	GetEventBus() *atoms.EventStore
-	PropagateEvent(eventType string, args ...interface{})
+	GetEventBus() *atoms.EventBus
 }
