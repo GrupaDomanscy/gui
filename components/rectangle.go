@@ -62,7 +62,18 @@ func (rec *RectangleComponent) SetPositionOffset(offset rl.Vector2) {
 func (rec *RectangleComponent) Render(getFont GetFontCallback) {
 	position := rec.GetPosition()
 
-	rl.DrawRectangle(int32(position.X), int32(position.Y), int32(rec.size.X), int32(rec.size.Y), rec.backgroundColor)
+	if rec.roundness != 0 {
+		rectangleBoundaries := rl.Rectangle{
+			X:      position.X,
+			Y:      position.Y,
+			Width:  rec.size.X,
+			Height: rec.size.Y,
+		}
+
+		rl.DrawRectangleRounded(rectangleBoundaries, rec.roundness, 4, rec.backgroundColor)
+	} else {
+		rl.DrawRectangle(int32(position.X), int32(position.Y), int32(rec.size.X), int32(rec.size.Y), rec.backgroundColor)
+	}
 
 	rec.child.Render(getFont)
 }
