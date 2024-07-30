@@ -70,7 +70,7 @@ func (rec *RectangleComponent) Render(getFont GetFontCallback) {
 			Height: rec.size.Y,
 		}
 
-		rl.DrawRectangleRounded(rectangleBoundaries, rec.roundness, 4, rec.backgroundColor)
+		rl.DrawRectangleRounded(rectangleBoundaries, rec.roundness, 0, rec.backgroundColor)
 	} else {
 		rl.DrawRectangle(int32(position.X), int32(position.Y), int32(rec.size.X), int32(rec.size.Y), rec.backgroundColor)
 	}
