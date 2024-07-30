@@ -1,9 +1,9 @@
 package components
 
 import (
-	"domanscy.group/gui/components/atoms"
 	"fmt"
 
+	"domanscy.group/gui/components/atoms"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -22,10 +22,10 @@ type LayoutComponent struct {
 
 	position ComponentPosition
 
-	eventBus *atoms.EventStore
+	eventBus *atoms.EventBus
 }
 
-func NewLayoutComponent(direction int, mainAxisAlignment int, crossAxisAlignment int) *LayoutComponent {
+func NewLayoutComponent(eventBus *atoms.EventBus, direction int, mainAxisAlignment int, crossAxisAlignment int) *LayoutComponent {
 	if direction != DirectionColumn && direction != DirectionRow {
 		panic(fmt.Sprintf("Unknown value for direction property: %d", direction))
 	}
@@ -44,6 +44,8 @@ func NewLayoutComponent(direction int, mainAxisAlignment int, crossAxisAlignment
 		mainAxisAlignment:  mainAxisAlignment,
 		crossAxisAlignment: crossAxisAlignment,
 		position:           NewComponentPosition(),
+
+		eventBus: eventBus,
 	}
 }
 
@@ -302,14 +304,6 @@ func (layout *LayoutComponent) GetPosition() rl.Vector2 {
 	return layout.position.Calculate()
 }
 
-func (layout *LayoutComponent) GetEventBus() *atoms.EventStore {
+func (layout *LayoutComponent) GetEventBus() *atoms.EventBus {
 	return layout.eventBus
-}
-
-func (layout *LayoutComponent) PropagateEvent(eventType string, args ...interface{}) {
-	layout.eventBus.DispatchEvent(eventType, args...)
-
-	for _, child := range layout.children {
-		child.PropagateEvent(eventType, args...)
-	}
 }

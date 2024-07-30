@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	. "domanscy.group/gui/components"
+	"domanscy.group/gui/components/atoms"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -32,10 +33,12 @@ func TestLayoutComponent(t *testing.T) {
 
 	for i, testCase := range testCases {
 		t.Run(fmt.Sprintf("Subtest %d", i+1), func(t *testing.T) {
-			layout := NewLayoutComponent(testCase.direction, testCase.mainAxisAlignment, testCase.crossAxisAlignment)
-			text1 := NewTextComponent("Hello world", "Roboto", 32, 0, WhiteColor)
-			text2 := NewTextComponent("Mumbo jambo", "Roboto", 32, 0, WhiteColor)
-			text3 := NewTextComponent("DSAOIJDSAOIJSAKJNDSAKJNBDSA", "Roboto", 32, 0, WhiteColor)
+			eventBus := atoms.NewEventBus()
+
+			layout := NewLayoutComponent(eventBus, testCase.direction, testCase.mainAxisAlignment, testCase.crossAxisAlignment)
+			text1 := NewTextComponent(eventBus, "Hello world", "Roboto", 32, 0, WhiteColor)
+			text2 := NewTextComponent(eventBus, "Mumbo jambo", "Roboto", 32, 0, WhiteColor)
+			text3 := NewTextComponent(eventBus, "DSAOIJDSAOIJSAKJNDSAKJNBDSA", "Roboto", 32, 0, WhiteColor)
 
 			layout.AddChild(text1)
 			layout.AddChild(text2)
