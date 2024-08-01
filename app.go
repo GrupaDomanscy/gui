@@ -58,6 +58,18 @@ func (app *App) run() {
 	})
 
 	for !rl.WindowShouldClose() {
+		var pressedChar int32 = rl.GetCharPressed()
+
+		for pressedChar != 0 {
+			isShiftPressed := rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift)
+			isCtrlPressed := rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)
+			isAltPressed := rl.IsKeyDown(rl.KeyLeftAlt) || rl.IsKeyDown(rl.KeyRightAlt)
+
+			app.eventBus.DispatchEvent("gui:keypress", pressedChar, isShiftPressed, isCtrlPressed, isAltPressed)
+
+			pressedChar = rl.GetCharPressed()
+		}
+
 		// window resize event thingies
 		newWindowSize := rlGetWindowSize()
 

@@ -28,7 +28,7 @@ func NewInputComponent(eventBus *atoms.EventBus, fontName string, fontSize float
 		panic("event bus can't be nil")
 	}
 
-	return &InputComponent{
+	component := &InputComponent{
 		position: NewComponentPosition(),
 		size:     rl.Vector2Zero(),
 		eventBus: eventBus,
@@ -42,6 +42,21 @@ func NewInputComponent(eventBus *atoms.EventBus, fontName string, fontSize float
 
 		text: "",
 	}
+
+	eventBus.ListenToEvent("gui:keypress", func(args ...interface{}) {
+		pressedKey := args[0].(rune)
+		isShiftPressed := args[1].(bool)
+		isCtrlPressed := args[2].(bool)
+		isAltPressed := args[3].(bool)
+
+		textInRunes := []rune(component.text)
+		textInRunes = append(textInRunes, pressedKey)
+
+		component.text = string(textInRunes)
+		fmt.Println(pressedKey)
+	})
+
+	return component
 }
 
 func (input *InputComponent) CalculateSize(getFont GetFontCallback, maxViewport rl.Vector2) rl.Vector2 {
