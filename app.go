@@ -6,6 +6,7 @@ import (
 
 	"domanscy.group/gui/components"
 	"domanscy.group/gui/components/atoms"
+	"domanscy.group/gui/components/events"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -58,17 +59,7 @@ func (app *App) run() {
 	})
 
 	for !rl.WindowShouldClose() {
-		var pressedChar int32 = rl.GetCharPressed()
-
-		for pressedChar != 0 {
-			isShiftPressed := rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift)
-			isCtrlPressed := rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)
-			isAltPressed := rl.IsKeyDown(rl.KeyLeftAlt) || rl.IsKeyDown(rl.KeyRightAlt)
-
-			app.eventBus.DispatchEvent("gui:keypress", pressedChar, isShiftPressed, isCtrlPressed, isAltPressed)
-
-			pressedChar = rl.GetCharPressed()
-		}
+		processKeyEvents(app.eventBus)
 
 		// window resize event thingies
 		newWindowSize := rlGetWindowSize()
@@ -77,9 +68,9 @@ func (app *App) run() {
 			oldWindowSize := app.windowSize
 			app.windowSize = newWindowSize
 
-			app.eventBus.DispatchEvent("gui:window-resized", WindowResizedEventArgs{
-				oldWindowSize,
-				newWindowSize,
+			app.eventBus.DispatchEvent("gui:window-resized", events.WindowResizedEvent{
+				OldWindowSize: oldWindowSize,
+				NewWindowSize: newWindowSize,
 			})
 
 			recalculateOnNextFrame = true

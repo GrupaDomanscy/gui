@@ -2,8 +2,10 @@ package components
 
 import (
 	"fmt"
+	"slices"
 
 	"domanscy.group/gui/components/atoms"
+	"domanscy.group/gui/components/events"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -43,17 +45,23 @@ func NewInputComponent(eventBus *atoms.EventBus, fontName string, fontSize float
 		text: "",
 	}
 
-	eventBus.ListenToEvent("gui:keypress", func(args ...interface{}) {
-		pressedKey := args[0].(rune)
-		isShiftPressed := args[1].(bool)
-		isCtrlPressed := args[2].(bool)
-		isAltPressed := args[3].(bool)
+	eventBus.ListenToEvent("gui:keyaction", func(rawArgs ...interface{}) {
+		args := rawArgs[0].(events.KeyPressEvent)
 
 		textInRunes := []rune(component.text)
-		textInRunes = append(textInRunes, pressedKey)
+
+		if slices.Contains(args.PressedKeys, rl.KeyBackspace) {
+			fmt.Println(args)
+			if len(textInRunes) == 0 {
+				return
+			}
+
+			textInRunes = textInRunes[:len(textInRunes)-1]
+		} else {
+			textInRunes = append(textInRunes, args.PressedChars...)
+		}
 
 		component.text = string(textInRunes)
-		fmt.Println(pressedKey)
 	})
 
 	return component
