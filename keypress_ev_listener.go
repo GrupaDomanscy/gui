@@ -22,12 +22,12 @@ var keysToCheck []int32 = []int32{
 }
 
 func processKeyEvents(eventBus *atoms.EventBus) {
-	// im really really sorry.
+	// im really, really sorry.
 	// afaik there is no other way. GetCharPressed and GetKeyPressed are functions which remove
 	// keys from internal array, but at one frame key must be checked with both of these functions.
 	// This makes it impossible to program the elegant and efficient way.
 	//
-	// ~110 iterations to the moon i guess
+	// ~110 iterations to the moon I guess
 
 	pressedChars := make([]rune, 0)
 
