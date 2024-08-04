@@ -24,7 +24,7 @@ type InputComponent struct {
 	text              string
 	textGlyphHitboxes []rl.Rectangle
 
-	cursorRunePos uint
+	cursorRunePos int
 	cursorXPos    float32
 
 	isInitialized bool
@@ -79,21 +79,23 @@ func (component *InputComponent) assignEventListeners(getFont GetFontCallback) {
 
 			if component.cursorRunePos < 0 {
 				component.cursorRunePos = 0
+			} else {
+				component.cursorXPos -= component.textGlyphHitboxes[component.cursorRunePos].Width
 			}
 		} else if slices.Contains(args.PressedKeys, rl.KeyRight) {
 			component.cursorRunePos++
 
-			if component.cursorRunePos > uint(len(textInRunes)) {
-				component.cursorRunePos = uint(len(textInRunes))
+			if component.cursorRunePos > len(textInRunes) {
+				component.cursorRunePos = len(textInRunes)
 			}
 		} else if slices.Contains(args.PressedKeys, rl.KeyBackspace) {
 			if len(textInRunes) == 0 {
 				return
 			}
 
-			component.cursorXPos -= component.textGlyphHitboxes[len(component.textGlyphHitboxes)-1].Width
-			component.textGlyphHitboxes = component.textGlyphHitboxes[:len(component.textGlyphHitboxes)-1]
-			textInRunes = textInRunes[:len(textInRunes)-1]
+			component.cursorXPos -= component.textGlyphHitboxes[component.cursorRunePos-1].Width
+			component.textGlyphHitboxes = component.textGlyphHitboxes[:component.cursorRunePos-1]
+			textInRunes = textInRunes[:component.cursorRunePos-1]
 			component.cursorRunePos--
 		} else {
 			font, err := getFont(component.fontName)
