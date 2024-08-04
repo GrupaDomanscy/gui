@@ -51,7 +51,6 @@ func NewInputComponent(eventBus *atoms.EventBus, fontName string, fontSize float
 		textInRunes := []rune(component.text)
 
 		if slices.Contains(args.PressedKeys, rl.KeyBackspace) {
-			fmt.Println(args)
 			if len(textInRunes) == 0 {
 				return
 			}
