@@ -96,9 +96,13 @@ func (component *InputComponent) assignEventListeners(getFont GetFontCallback) {
 				return
 			}
 
+			if component.cursorRunePos == 0 {
+				return
+			}
+
 			component.cursorXPos -= component.textGlyphHitboxes[component.cursorRunePos-1].Width
-			component.textGlyphHitboxes = component.textGlyphHitboxes[:component.cursorRunePos-1]
-			textInRunes = textInRunes[:component.cursorRunePos-1]
+			component.textGlyphHitboxes = slices.Delete(component.textGlyphHitboxes, component.cursorRunePos-1, component.cursorRunePos)
+			textInRunes = slices.Delete(textInRunes, component.cursorRunePos-1, component.cursorRunePos)
 			component.cursorRunePos--
 		} else {
 			font, err := getFont(component.fontName)
