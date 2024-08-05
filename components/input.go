@@ -87,6 +87,8 @@ func (component *InputComponent) assignEventListeners(getFont GetFontCallback) {
 
 			if component.cursorRunePos > len(textInRunes) {
 				component.cursorRunePos = len(textInRunes)
+			} else {
+				component.cursorXPos += component.textGlyphHitboxes[component.cursorRunePos-1].Width
 			}
 		} else if slices.Contains(args.PressedKeys, rl.KeyBackspace) {
 			if len(textInRunes) == 0 {
