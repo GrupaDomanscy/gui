@@ -104,6 +104,17 @@ func (component *InputComponent) assignEventListeners(getFont GetFontCallback) {
 			component.textGlyphHitboxes = slices.Delete(component.textGlyphHitboxes, component.cursorRunePos-1, component.cursorRunePos)
 			textInRunes = slices.Delete(textInRunes, component.cursorRunePos-1, component.cursorRunePos)
 			component.cursorRunePos--
+		} else if slices.Contains(args.PressedKeys, rl.KeyDelete) {
+			if len(textInRunes) == 0 {
+				return
+			}
+
+			if component.cursorRunePos >= len(textInRunes) {
+				return
+			}
+
+			component.textGlyphHitboxes = slices.Delete(component.textGlyphHitboxes, component.cursorRunePos, component.cursorRunePos+1)
+			textInRunes = slices.Delete(textInRunes, component.cursorRunePos, component.cursorRunePos+1)
 		} else {
 			font, err := getFont(component.fontName)
 			if err != nil {
