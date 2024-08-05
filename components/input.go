@@ -147,12 +147,11 @@ func (component *InputComponent) processCustomCharPress(pressedChars ...int32) {
 
 	for _, pressedChar := range pressedChars {
 		hitbox := convertGlyphInfoToRectangle(rl.GetGlyphInfo(font, pressedChar), font, component.fontSize)
-		component.textGlyphHitboxes = append(component.textGlyphHitboxes, hitbox)
+		component.textGlyphHitboxes = slices.Insert(component.textGlyphHitboxes, component.cursorRunePos, hitbox)
 		component.cursorXPos += hitbox.Width
+		textInRunes = slices.Insert(textInRunes, component.cursorRunePos, pressedChar)
 		component.cursorRunePos++
 	}
-
-	textInRunes = append(textInRunes, pressedChars...)
 
 	component.text = string(textInRunes)
 }
