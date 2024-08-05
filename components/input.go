@@ -3,6 +3,7 @@ package components
 import (
 	"fmt"
 	"slices"
+	"time"
 
 	"domanscy.group/gui/components/atoms"
 	"domanscy.group/gui/components/events"
@@ -14,8 +15,9 @@ type InputComponent struct {
 	size     rl.Vector2
 	eventBus *atoms.EventBus
 
-	fontName string
-	fontSize float32
+	fontName              string
+	cachedGetFontCallback GetFontCallback
+	fontSize              float32
 
 	maxWidth float32
 
@@ -25,8 +27,10 @@ type InputComponent struct {
 	text              string
 	textGlyphHitboxes []rl.Rectangle
 
-	cursorRunePos int
-	cursorXPos    float32
+	cursorRunePos             int
+	cursorXPos                float32
+	showCursor                bool
+	lastShowCursorStateChange int64
 
 	isInitialized bool
 }
@@ -41,8 +45,9 @@ func NewInputComponent(eventBus *atoms.EventBus, fontName string, fontSize float
 		size:     rl.Vector2Zero(),
 		eventBus: eventBus,
 
-		fontName: fontName,
-		fontSize: fontSize,
+		fontName:              fontName,
+		cachedGetFontCallback: nil,
+		fontSize:              fontSize,
 
 		maxWidth:        maxWidth,
 		backgroundColor: backgroundColor,
@@ -55,6 +60,9 @@ func NewInputComponent(eventBus *atoms.EventBus, fontName string, fontSize float
 		cursorXPos:    0,
 
 		isInitialized: false,
+
+		showCursor:                false,
+		lastShowCursorStateChange: time.Now().UnixMilli(),
 	}
 
 	return component
@@ -69,75 +77,111 @@ func convertGlyphInfoToRectangle(info rl.GlyphInfo, font rl.Font, fontSize float
 	}
 }
 
-func (component *InputComponent) assignEventListeners(getFont GetFontCallback) {
+func (component *InputComponent) processLeftClick() {
+	component.cursorRunePos--
+
+	if component.cursorRunePos < 0 {
+		component.cursorRunePos = 0
+	} else {
+		component.cursorXPos -= component.textGlyphHitboxes[component.cursorRunePos].Width
+	}
+}
+
+func (component *InputComponent) processRightClick() {
+	textInRunes := []rune(component.text)
+
+	component.cursorRunePos++
+
+	if component.cursorRunePos > len(textInRunes) {
+		component.cursorRunePos = len(textInRunes)
+	} else {
+		component.cursorXPos += component.textGlyphHitboxes[component.cursorRunePos-1].Width
+	}
+
+	component.text = string(textInRunes)
+}
+
+func (component *InputComponent) processBackspaceClick() {
+	textInRunes := []rune(component.text)
+
+	if len(textInRunes) == 0 {
+		return
+	}
+
+	if component.cursorRunePos == 0 {
+		return
+	}
+
+	component.cursorXPos -= component.textGlyphHitboxes[component.cursorRunePos-1].Width
+	component.textGlyphHitboxes = slices.Delete(component.textGlyphHitboxes, component.cursorRunePos-1, component.cursorRunePos)
+	textInRunes = slices.Delete(textInRunes, component.cursorRunePos-1, component.cursorRunePos)
+	component.cursorRunePos--
+
+	component.text = string(textInRunes)
+}
+
+func (component *InputComponent) processDeleteClick() {
+	textInRunes := []rune(component.text)
+
+	if len(textInRunes) == 0 {
+		return
+	}
+
+	if component.cursorRunePos >= len(textInRunes) {
+		return
+	}
+
+	component.textGlyphHitboxes = slices.Delete(component.textGlyphHitboxes, component.cursorRunePos, component.cursorRunePos+1)
+	textInRunes = slices.Delete(textInRunes, component.cursorRunePos, component.cursorRunePos+1)
+
+	component.text = string(textInRunes)
+}
+
+func (component *InputComponent) processCustomCharPress(pressedChars ...int32) {
+	textInRunes := []rune(component.text)
+
+	font, err := component.cachedGetFontCallback(component.fontName)
+	if err != nil {
+		panic("Font has not been loaded into memory")
+	}
+
+	for _, pressedChar := range pressedChars {
+		hitbox := convertGlyphInfoToRectangle(rl.GetGlyphInfo(font, pressedChar), font, component.fontSize)
+		component.textGlyphHitboxes = append(component.textGlyphHitboxes, hitbox)
+		component.cursorXPos += hitbox.Width
+		component.cursorRunePos++
+	}
+
+	textInRunes = append(textInRunes, pressedChars...)
+
+	component.text = string(textInRunes)
+}
+
+func (component *InputComponent) assignEventListeners() {
 	component.eventBus.ListenToEvent("gui:keyaction", func(rawArgs ...interface{}) {
 		args := rawArgs[0].(events.KeyPressEvent)
 
-		textInRunes := []rune(component.text)
+		component.showCursor = true
+		component.lastShowCursorStateChange = time.Now().UnixMilli()
 
 		if slices.Contains(args.PressedKeys, rl.KeyLeft) {
-			component.cursorRunePos--
-
-			if component.cursorRunePos < 0 {
-				component.cursorRunePos = 0
-			} else {
-				component.cursorXPos -= component.textGlyphHitboxes[component.cursorRunePos].Width
-			}
+			component.processLeftClick()
 		} else if slices.Contains(args.PressedKeys, rl.KeyRight) {
-			component.cursorRunePos++
-
-			if component.cursorRunePos > len(textInRunes) {
-				component.cursorRunePos = len(textInRunes)
-			} else {
-				component.cursorXPos += component.textGlyphHitboxes[component.cursorRunePos-1].Width
-			}
+			component.processRightClick()
 		} else if slices.Contains(args.PressedKeys, rl.KeyBackspace) {
-			if len(textInRunes) == 0 {
-				return
-			}
-
-			if component.cursorRunePos == 0 {
-				return
-			}
-
-			component.cursorXPos -= component.textGlyphHitboxes[component.cursorRunePos-1].Width
-			component.textGlyphHitboxes = slices.Delete(component.textGlyphHitboxes, component.cursorRunePos-1, component.cursorRunePos)
-			textInRunes = slices.Delete(textInRunes, component.cursorRunePos-1, component.cursorRunePos)
-			component.cursorRunePos--
+			component.processBackspaceClick()
 		} else if slices.Contains(args.PressedKeys, rl.KeyDelete) {
-			if len(textInRunes) == 0 {
-				return
-			}
-
-			if component.cursorRunePos >= len(textInRunes) {
-				return
-			}
-
-			component.textGlyphHitboxes = slices.Delete(component.textGlyphHitboxes, component.cursorRunePos, component.cursorRunePos+1)
-			textInRunes = slices.Delete(textInRunes, component.cursorRunePos, component.cursorRunePos+1)
+			component.processDeleteClick()
 		} else {
-			font, err := getFont(component.fontName)
-			if err != nil {
-				panic("Font has not been loaded into memory")
-			}
-
-			for _, pressedChar := range args.PressedChars {
-				hitbox := convertGlyphInfoToRectangle(rl.GetGlyphInfo(font, pressedChar), font, component.fontSize)
-				component.textGlyphHitboxes = append(component.textGlyphHitboxes, hitbox)
-				component.cursorXPos += hitbox.Width
-				component.cursorRunePos++
-			}
-
-			textInRunes = append(textInRunes, args.PressedChars...)
+			component.processCustomCharPress(args.PressedChars...)
 		}
-
-		component.text = string(textInRunes)
 	})
 }
 
 func (input *InputComponent) CalculateSize(getFont GetFontCallback, maxViewport rl.Vector2) rl.Vector2 {
 	if !input.isInitialized {
-		input.assignEventListeners(getFont)
+		input.cachedGetFontCallback = getFont
+		input.assignEventListeners()
 		input.isInitialized = true
 	}
 
@@ -172,7 +216,14 @@ func (input *InputComponent) Render(getFont GetFontCallback) {
 
 	rl.DrawTextEx(font, input.text, position, input.fontSize, 0, input.textColor)
 
-	rl.DrawRectangle(int32(input.cursorXPos), int32(position.Y), 2, int32(input.fontSize), input.textColor)
+	if time.Now().UnixMilli()-input.lastShowCursorStateChange > 500 {
+		input.lastShowCursorStateChange = time.Now().UnixMilli()
+		input.showCursor = !input.showCursor
+	}
+
+	if input.showCursor {
+		rl.DrawRectangle(int32(input.cursorXPos), int32(position.Y), 2, int32(input.fontSize), input.textColor)
+	}
 }
 
 func (input *InputComponent) SetPosition(pos rl.Vector2) {
