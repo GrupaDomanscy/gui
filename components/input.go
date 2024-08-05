@@ -1,11 +1,12 @@
 package components
 
 import (
+	"fmt"
+	"slices"
+
 	"domanscy.group/gui/components/atoms"
 	"domanscy.group/gui/components/events"
-	"fmt"
 	rl "github.com/gen2brain/raylib-go/raylib"
-	"slices"
 )
 
 type InputComponent struct {
