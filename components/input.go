@@ -10,6 +10,9 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+const LONGER_STOP = 0
+const SHORTER_STOP = 1
+
 type InputComponent struct {
 	position ComponentPosition
 	size     rl.Vector2
@@ -33,6 +36,10 @@ type InputComponent struct {
 	lastShowCursorStateChange int64
 
 	isInitialized bool
+
+	stopEffectType           int
+	lastHeldKey              int32
+	lastHeldKeyCooldownStart int64
 }
 
 func NewInputComponent(eventBus *atoms.EventBus, fontName string, fontSize float32, maxWidth float32, backgroundColor rl.Color, textColor rl.Color) *InputComponent {
@@ -63,6 +70,10 @@ func NewInputComponent(eventBus *atoms.EventBus, fontName string, fontSize float
 
 		showCursor:                false,
 		lastShowCursorStateChange: time.Now().UnixMilli(),
+
+		stopEffectType:           LONGER_STOP,
+		lastHeldKey:              0,
+		lastHeldKeyCooldownStart: 0,
 	}
 
 	return component
@@ -156,12 +167,62 @@ func (component *InputComponent) processCustomCharPress(pressedChars ...int32) {
 	component.text = string(textInRunes)
 }
 
+func (component *InputComponent) processKeyHold(heldKeys ...int32) (stopHandlerExecution bool) {
+	if len(heldKeys) == 0 {
+		component.stopEffectType = LONGER_STOP
+		component.lastHeldKey = 0
+		component.lastHeldKeyCooldownStart = time.Now().UnixMilli()
+		return
+	}
+
+	if component.lastHeldKey == heldKeys[len(heldKeys)-1] {
+		stopHandlerExecution = true
+
+		var cooldown int64 = 300
+		if component.stopEffectType == SHORTER_STOP {
+			cooldown = 30
+		}
+
+		if time.Now().UnixMilli()-component.lastHeldKeyCooldownStart > cooldown {
+			if slices.Contains([]int32{component.lastHeldKey}, rl.KeyLeft) {
+				component.processLeftClick()
+			} else if slices.Contains([]int32{component.lastHeldKey}, rl.KeyRight) {
+				component.processRightClick()
+			} else if slices.Contains([]int32{component.lastHeldKey}, rl.KeyBackspace) {
+				component.processBackspaceClick()
+			} else if slices.Contains([]int32{component.lastHeldKey}, rl.KeyDelete) {
+				component.processDeleteClick()
+			} else {
+				component.processCustomCharPress(component.lastHeldKey)
+			}
+
+			component.lastHeldKeyCooldownStart = time.Now().UnixMilli()
+			component.stopEffectType = SHORTER_STOP
+		}
+
+		return
+	} else {
+		component.stopEffectType = LONGER_STOP
+		component.lastHeldKey = heldKeys[len(heldKeys)-1]
+		component.lastHeldKeyCooldownStart = time.Now().UnixMilli()
+	}
+
+	stopHandlerExecution = false
+	return
+
+}
+
 func (component *InputComponent) assignEventListeners() {
 	component.eventBus.ListenToEvent("gui:keyaction", func(rawArgs ...interface{}) {
 		args := rawArgs[0].(events.KeyPressEvent)
 
 		component.showCursor = true
 		component.lastShowCursorStateChange = time.Now().UnixMilli()
+
+		stopHandlerExecution := component.processKeyHold(args.DownKeys...)
+		if stopHandlerExecution {
+			return
+		}
 
 		if slices.Contains(args.PressedKeys, rl.KeyLeft) {
 			component.processLeftClick()
