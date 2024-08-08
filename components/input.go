@@ -38,7 +38,8 @@ type InputComponent struct {
 	isInitialized bool
 
 	stopEffectType           int
-	lastHeldKey              int32
+	lastHeldKey              rune
+	lastHeldKeyShortcut      []rune
 	lastHeldKeyCooldownStart int64
 }
 
@@ -73,6 +74,7 @@ func NewInputComponent(eventBus *atoms.EventBus, fontName string, fontSize float
 
 		stopEffectType:           LONGER_STOP,
 		lastHeldKey:              0,
+		lastHeldKeyShortcut:      []rune{},
 		lastHeldKeyCooldownStart: 0,
 	}
 
@@ -167,15 +169,69 @@ func (component *InputComponent) processCustomCharPress(pressedChars ...int32) {
 	component.text = string(textInRunes)
 }
 
-func (component *InputComponent) processKeyHold(heldKeys ...int32) (stopHandlerExecution bool) {
+func (component *InputComponent) processKeyHold(heldKeys []int32, pressedChars []int32) (stopHandlerExecution bool) {
 	if len(heldKeys) == 0 {
 		component.stopEffectType = LONGER_STOP
 		component.lastHeldKey = 0
 		component.lastHeldKeyCooldownStart = time.Now().UnixMilli()
+		stopHandlerExecution = false
 		return
 	}
 
-	if component.lastHeldKey == heldKeys[len(heldKeys)-1] {
+	heldKey := heldKeys[len(heldKeys)-1]
+
+	// check if user is trying to repeat some diacritic character
+	if slices.Contains(heldKeys, rl.KeyRightAlt) { // check for alt gr
+		// check if the only held key is alt gr
+		if len(heldKeys) == 1 {
+			return
+		}
+
+		// Get second held key (the one besides alt gr), we will use it later for checking if it matches with last held one
+		var secondKey int32 = 0
+		for _, key := range heldKeys {
+			if key >= rl.KeyA && key <= rl.KeyZ {
+				secondKey = key
+			}
+		}
+
+		if secondKey == 0 {
+			return
+		}
+
+		if slices.Equal(heldKeys, component.lastHeldKeyShortcut) {
+			var cooldown int64 = 300
+
+			if component.stopEffectType == SHORTER_STOP {
+				cooldown = 30
+			}
+
+			if time.Now().UnixMilli()-component.lastHeldKeyCooldownStart > cooldown {
+				component.processCustomCharPress(component.lastHeldKey)
+
+				component.lastHeldKeyCooldownStart = time.Now().UnixMilli()
+				component.stopEffectType = SHORTER_STOP
+			}
+
+			stopHandlerExecution = true
+			return
+		} else {
+			if len(pressedChars) == 0 {
+				return
+			}
+
+			component.lastHeldKeyShortcut = heldKeys
+			component.lastHeldKey = pressedChars[0]
+			component.stopEffectType = LONGER_STOP
+			component.lastHeldKeyCooldownStart = time.Now().UnixMilli()
+			component.processCustomCharPress(component.lastHeldKey)
+			stopHandlerExecution = true
+		}
+
+		return
+	}
+
+	if component.lastHeldKey == heldKey {
 		stopHandlerExecution = true
 
 		var cooldown int64 = 300
@@ -205,6 +261,7 @@ func (component *InputComponent) processKeyHold(heldKeys ...int32) (stopHandlerE
 		component.stopEffectType = LONGER_STOP
 		component.lastHeldKey = heldKeys[len(heldKeys)-1]
 		component.lastHeldKeyCooldownStart = time.Now().UnixMilli()
+		component.lastHeldKeyShortcut = heldKeys
 	}
 
 	stopHandlerExecution = false
@@ -216,10 +273,19 @@ func (component *InputComponent) assignEventListeners() {
 	component.eventBus.ListenToEvent("gui:keyaction", func(rawArgs ...interface{}) {
 		args := rawArgs[0].(events.KeyPressEvent)
 
+		containsLeftAlt := slices.Contains(args.DownKeys, rl.KeyLeftAlt)
+		containsLeftControl := slices.Contains(args.DownKeys, rl.KeyLeftControl)
+		containsRightControl := slices.Contains(args.DownKeys, rl.KeyRightControl)
+
+		// If contains left ctrl, right ctrl or left alt then it's a shortcut. Stop execution.
+		if containsLeftControl || containsRightControl || containsLeftAlt {
+			return
+		}
+
 		component.showCursor = true
 		component.lastShowCursorStateChange = time.Now().UnixMilli()
 
-		stopHandlerExecution := component.processKeyHold(args.DownKeys...)
+		stopHandlerExecution := component.processKeyHold(args.DownKeys, args.PressedChars)
 		if stopHandlerExecution {
 			return
 		}
